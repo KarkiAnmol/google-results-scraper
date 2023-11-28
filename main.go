@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 var googleDomains = map[string]string{
@@ -47,6 +49,46 @@ func buildGoogleUrls(searchTerm, countryCode,languageCode string, pages, count i
 	return toScrape,nil
 
 }
+func googleResultParsing(response *http.Response,rank int)([]SearchResult,error) {
+	doc,err:=goquery.NewDocumentFromResponse(response)
+	if err!=nil{
+		return nil,err
+	}
+	result:=[]SearchResult{}
+	sel:=doc.Find("div.g")
+	rank++
+	for i:= range sel.Nodes{
+		item := sel.Eq(i)
+		linkTag := item.Find("a")
+		link,_:=linkTag.Attr("href")
+		titleTag:=item.Find("h3.r")
+		descTag:= item.Find("span.st")
+		desc:=descTag.Text()
+		title:=titleTag.Text()
+		link =strings.Trim(link," ")
+		if link != " " && link != "#" && !strings.HasPrefix(link,"/"){
+			result:=SearchResult{
+				rank,
+				link,
+				title,
+				desc,
+			}
+			results = append(results,result)
+			rank++
+		}
+		return results,err
+	}
+}
+func getScrapeClient(proxyString interface{}) *http.Client{
+	switch v:= proxyString.(type){
+	case string:
+		proxyURL,_:=url.Parse(v)
+		return &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+	
+	default:
+		return &http.Client{}
+}
+}
 func GoogleScrape(searchTerm, countryCode, languageCode string,proxyString interface{}, pages, count,backoff) ([]SearchResult, error) {
 	results := []SearchResult{}
 	resultCounter := 0
@@ -59,7 +101,7 @@ func GoogleScrape(searchTerm, countryCode, languageCode string,proxyString inter
 		if err!=nil{
 			return nil,err
 		}
-		data,err :=googleResultParsin(res,resultCounter)
+		data,err :=googleResultParsing(res,resultCounter)
 		if err!=nil{
 			return nil,err
 		}
@@ -76,7 +118,7 @@ func scrapeClientRequest(searchURL string,proxyString interface{})(*http.Respons
 	baseClient:= getScrapeClient(proxyString)
 	req,_=http.NewRequest("GET",searchURL,nil)
 	req.Header().set("User-Agent",randomUserAgent())
-	res,err:= baseClient.DO(req)
+	res,err:= baseClient.Do(req)
 	if res.StatusCode !=200{
 		err:= fmt.Errorf("scraper recieved a non-200 status code suggesting a ban")
 		return nil,err
