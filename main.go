@@ -11,6 +11,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+// googleDomains defines Google search URLs for different countries.
 var googleDomains = map[string]string{
 	"com": "https://www.google.com/search?q=",
 	"ac":  "https://www.google.ac/search?q=",
@@ -212,6 +213,7 @@ var googleDomains = map[string]string{
 	"zw":  "https://www.google.co.zw/search?q=",
 }
 
+// SearchResult represents a single search result.
 type SearchResult struct {
 	ResultRank  int
 	ResultURL   string
@@ -219,6 +221,7 @@ type SearchResult struct {
 	ResultDesc  string
 }
 
+// userAgents contains a list of user agents for HTTP requests.
 var userAgents = []string{
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36",
 	"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36",
@@ -228,12 +231,14 @@ var userAgents = []string{
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Safari/604.1.38",
 }
 
+// randomUserAgent selects a random user agent from the list.
 func randomUserAgent() string {
 	rand.Seed(time.Now().Unix())
 	randNum := rand.Int() % len(userAgents)
 	return userAgents[randNum]
 }
 
+// buildGoogleUrls constructs Google search URLs based on input parameters.
 func buildGoogleUrls(searchTerm, countryCode, languageCode string, pages, count int) ([]string, error) {
 	toScrape := []string{}
 	searchTerm = strings.Trim(searchTerm, " ")
@@ -252,6 +257,7 @@ func buildGoogleUrls(searchTerm, countryCode, languageCode string, pages, count 
 
 }
 
+// googleResultParsing extracts search results from the Google search page.
 func googleResultParsing(response *http.Response, rank int) ([]SearchResult, error) {
 	doc, err := goquery.NewDocumentFromResponse(response)
 
@@ -287,6 +293,7 @@ func googleResultParsing(response *http.Response, rank int) ([]SearchResult, err
 
 }
 
+// getScrapeClient returns an HTTP client for scraping, optionally using a proxy.
 func getScrapeClient(proxyString interface{}) *http.Client {
 
 	switch v := proxyString.(type) {
@@ -299,6 +306,7 @@ func getScrapeClient(proxyString interface{}) *http.Client {
 	}
 }
 
+// GoogleScrape performs Google search scraping using the specified parameters.
 func GoogleScrape(searchTerm, countryCode, languageCode string, proxyString interface{}, pages, count, backoff int) ([]SearchResult, error) {
 	results := []SearchResult{}
 	resultCounter := 0
@@ -324,6 +332,7 @@ func GoogleScrape(searchTerm, countryCode, languageCode string, proxyString inte
 	return results, nil
 }
 
+// scrapeClientRequest performs an HTTP request for scraping a Google search page.
 func scrapeClientRequest(searchURL string, proxyString interface{}) (*http.Response, error) {
 	baseClient := getScrapeClient(proxyString)
 	req, _ := http.NewRequest("GET", searchURL, nil)
@@ -342,6 +351,7 @@ func scrapeClientRequest(searchURL string, proxyString interface{}) (*http.Respo
 }
 
 func main() {
+	// Example usage of GoogleScrape function.
 	res, err := GoogleScrape("andrew huberman", "com", "en", nil, 1, 30, 10)
 	if err == nil {
 		for _, res := range res {
